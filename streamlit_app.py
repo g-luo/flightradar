@@ -54,13 +54,6 @@ def scrape_csvs(driver, url, load_earlier):
       continue
   return plane_info, infos
 
-def get_driver():
-  chrome_options = Options()
-  chrome_options.add_argument("--headless")
-  driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
-  driver.get("https://www.flightradar24.com")
-  return driver
-
 def scrape(driver, links, load_earlier):
   metadata = {}
   for url in stqdm(links):
@@ -95,6 +88,14 @@ def get_fleet(driver, fleet):
   links = re.findall(r'href=[\'"]?([^\'" >]+)', html)
   links = ["https://www.flightradar24.com" + link for link in links if "/data/aircraft" in link and link != "/data/aircraft"]
   return links
+
+@st.cache
+def get_driver():
+  chrome_options = Options()
+  chrome_options.add_argument("--headless")
+  driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
+  driver.get("https://www.flightradar24.com")
+  return driver
 
 def show_streamlit():
   title = "Scrape FlightRadar"
