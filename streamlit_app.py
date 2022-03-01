@@ -112,15 +112,12 @@ def show_streamlit():
   body = """
     **How-To Guide:**
     This web GUI scrapes the tables in FlightRadar and outputs them as a downloadable Excel file.
-    Note that this tool uses Selenium, BeautifulSoup, and Chrome for web scraping.
-    It is recommended to use this tool with a Google Chrome browser. 
     Fill out the input fields, launch, wait for the scraping to finish, and finally click Download Result to save the outputs.
+    Please input a link for fleets (e.g. https://www.flightradar24.com/data/airlines/2i-csb/fleet) or aircraft (e.g. https://www.flightradar24.com/data/aircraft/n881yv). This automatically scrapes tables for all aircraft that can be found on these pages. Other links with tables will likely work, but each tab in the output may no longer be grouped by aircraft.
 
-    - Login: If you would like to scrape historical data that requires a premium account, check "Yes" and input your login information on the FlightRadar page that appears. This is a browser launched by Selenium -- we don't cache any of your login info but input this information at your own caution.
-    - Fleet or flights page: A link for fleets (e.g. https://www.flightradar24.com/data/airlines/2i-csb/fleet) or aircraft (e.g. https://www.flightradar24.com/data/aircraft/n881yv). This automatically scrapes tables for all aircraft that can be found on these pages. Other links with tables will likely work, but each tab in the output may no longer be grouped by aircraft.
-    - Load earlier: Number of times to click "Load Earlier" on the page to retrieve historical data. The earliest date saved will vary by aircraft by the distribution of dates in the table.
-  """
-
+    For Developers: This tool uses Selenium, BeautifulSoup, and Chrome for web scraping. Note that this runs as an anonymous user and will run into paywalls; please check out the [Github repo](https://github.com/g-luo/flightradar/blob/2b540ca93673fbddbb731efb159e808af5f4c5cd/streamlit_app.py#L139) for more information on authentication.
+    """
+    
   st.set_page_config(page_title=title, page_icon=icon, layout="centered")
   st.title(icon + " " + title)
   st.markdown(body)
@@ -130,9 +127,24 @@ def show_streamlit():
   if "cookies" not in st.session_state:
     st.session_state.cookies = None
 
-  login = st.radio("Would you like to login?", ("No", "Yes"))
+  # Set can_authenticate to true if you would like to authenticate.
+  # This can only be done locally since it is too insecure 
+  # and difficult to run Selenium in headless mode online.
+
+  can_authenticate = False
+  if can_authenticate:
+    login = st.radio("Would you like to login?", ("No", "Yes"))
+  else:
+    login = "No"
   page = st.text_input("Fleet or aircraft page")
-  load_earlier = st.number_input("Load earlier", min_value=0, max_value=10)
+
+  # load_earlier is the number of times to click "Load Earlier" on the page to retrieve historical data. 
+  # The earliest date saved will vary by aircraft by the distribution of dates in the table.
+
+  if can_authenticate:
+    load_earlier = st.number_input("Load earlier", min_value=0, max_value=10)
+  else:
+    load_earlier = 0
   launch = st.button(
     label="Launch",
     disabled=page == ""
