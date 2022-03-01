@@ -7,19 +7,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+import pandas as pd
 
 import time
 import pickle
-import pandas as pd
 from io import BytesIO
 import re
-
-def login(driver, cookies):
-  for cookie in cookies:
-    try:
-      driver.add_cookie(cookie)
-    except Exception as e:
-      print(e)
 
 def scrape_csvs(driver, url, load_earlier):
   driver.get(url)
@@ -89,11 +82,28 @@ def get_fleet(driver, fleet):
   links = ["https://www.flightradar24.com" + link for link in links if "/data/aircraft" in link and link != "/data/aircraft"]
   return links
 
-
 def get_driver():
   chrome_options = Options()
   chrome_options.add_argument("--headless")
   driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
+  return driver
+
+def get_driver_login():
+  cookies = []
+  get_name = lambda cookies, name: [c["value"] for c in cookies if c["name"] == name]
+  driver = Chrome(ChromeDriverManager().install())
+
+  driver.get("https://www.flightradar24.com")
+  time.sleep(2)
+  frr = get_name(driver.get_cookies(), "_frr")
+  while not frr:
+    cookies = driver.get_cookies()
+    frr = get_name(cookies, "_frr")
+  for cookie in cookies:
+    try:
+      driver.add_cookie(cookie)
+    except Exception as e:
+      print(e)
   return driver
 
 def show_streamlit():
@@ -106,6 +116,7 @@ def show_streamlit():
     It is recommended to use this tool with a Google Chrome browser. 
     Fill out the input fields, launch, wait for the scraping to finish, and finally click Download Result to save the outputs.
 
+    - Login: If you would like to scrape historical data that requires a premium account, check "Yes" and input your login information on the FlightRadar page that appears. This is a browser launched by Selenium -- we don't cache any of your login info but input this information at your own caution.
     - Fleet or flights page: A link for fleets (e.g. https://www.flightradar24.com/data/airlines/2i-csb/fleet) or aircraft (e.g. https://www.flightradar24.com/data/aircraft/n881yv). This automatically scrapes tables for all aircraft that can be found on these pages. Other links with tables will likely work, but each tab in the output may no longer be grouped by aircraft.
     - Load earlier: Number of times to click "Load Earlier" on the page to retrieve historical data. The earliest date saved will vary by aircraft by the distribution of dates in the table.
   """
@@ -116,28 +127,30 @@ def show_streamlit():
 
   if "data" not in st.session_state:
     st.session_state.data = None
+  if "cookies" not in st.session_state:
+    st.session_state.cookies = None
 
+  login = st.radio("Would you like to login?", ("No", "Yes"))
   page = st.text_input("Fleet or aircraft page")
-  load_earlier = st.number_input("Load earlier", min_value=0, max_value=50)
-  cookies = st.file_uploader(
-    "Upload Cookies", 
-    type=["pkl"], 
-    accept_multiple_files=False,
-  )
+  load_earlier = st.number_input("Load earlier", min_value=0, max_value=10)
   launch = st.button(
     label="Launch",
     disabled=page == ""
   )
-  
+
   if launch:
-    driver = get_driver()
+    if login == "Yes":
+      driver = get_driver_login()
+    else:
+      driver = get_driver()
+
+    if st.session_state.cookies:
+      driver_login(driver, st.session_state.cookies)
+
     if page.split("/")[-1] == "fleet":
       links = get_fleet(driver, page)
     else:
       links = [page]
-
-    if cookies:
-      login(driver, pickle.load(cookies))
 
     metadata = scrape(driver, links, load_earlier=load_earlier)
     st.session_state.data = save_metadata(metadata)
