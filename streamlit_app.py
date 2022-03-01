@@ -89,12 +89,11 @@ def get_fleet(driver, fleet):
   links = ["https://www.flightradar24.com" + link for link in links if "/data/aircraft" in link and link != "/data/aircraft"]
   return links
 
-@st.cache
+
 def get_driver():
   chrome_options = Options()
   chrome_options.add_argument("--headless")
   driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
-  driver.get("https://www.flightradar24.com")
   return driver
 
 def show_streamlit():
