@@ -1,2 +1,2 @@
-chromium==98.0.4758.102
-chromium-driver==98.0.4758.102
+chromium
+chromium-driver
